@@ -2,18 +2,28 @@
 import { useEffect } from "react";
 import { auth } from "../firebase";
 import {
-  signInWithPopup,
-  GoogleAuthProvider,
-  setPersistence,
-  browserLocalPersistence,
-  onAuthStateChanged,
-} from "firebase/auth";
+    signInWithRedirect,
+    GoogleAuthProvider,
+    getRedirectResult,
+    setPersistence,
+    browserLocalPersistence,
+    onAuthStateChanged
+  } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 
 const LoginPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    getRedirectResult(auth).then((result) => {
+      if (result?.user) {
+        console.log("🔁 redirect 登入成功：", result.user.email);
+        navigate("/rooms");
+      }
+    }).catch((err) => {
+      console.error("redirect 登入失敗", err);
+    });
+  
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         console.log("✅ 已登入使用者：", user.email);
@@ -22,24 +32,19 @@ const LoginPage = () => {
         console.log("🕵️ 尚未登入");
       }
     });
-
+  
     return () => unsubscribe();
   }, [navigate]);
 
   const handleGoogleLogin = async () => {
     const provider = new GoogleAuthProvider();
-
+  
     try {
-      // 設定登入狀態儲存策略為 local 儲存（記住登入）
       await setPersistence(auth, browserLocalPersistence);
-
-      // 登入
-      await signInWithPopup(auth, provider);
-
-      console.log("✅ 登入成功！");
-      navigate("/rooms");
+      await signInWithRedirect(auth, provider); // ✅ 重點：改用 redirect 模式
     } catch (error) {
       console.error("❌ 登入錯誤：", error.code, error.message);
+      alert("登入失敗，請稍後再試");
     }
   };
 

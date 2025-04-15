@@ -1,22 +1,21 @@
-// src/pages/RoomListPage.jsx
 import { useEffect, useState } from "react";
 import { roomData } from "../data/roomData";
 import { db, auth } from "../firebase";
 import { doc, setDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
+import Header from "../components/Header";
+import RoomReviewSection from "../components/RoomReviewSection";
 
 const RoomListPage = () => {
   const [clickedRooms, setClickedRooms] = useState([]);
-  const [user, setUser] = useState(null); // 存登入狀態
-  const [loading, setLoading] = useState(true); // 防止閃跳
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      console.log("登入狀態變化：", currentUser);
       setUser(currentUser);
       setLoading(false);
     });
-
     return () => unsubscribe();
   }, []);
 
@@ -28,59 +27,73 @@ const RoomListPage = () => {
 
     try {
       const roomRef = doc(db, "users", user.uid, "playedRooms", room.id);
-      const now = new Date();
-      console.log("記錄時間：", now);
-
       await setDoc(roomRef, {
         ...room,
-        playedAt: now
+        playedAt: new Date(),
       });
-
       setClickedRooms((prev) => [...prev, room.id]);
     } catch (err) {
       console.error("儲存紀錄失敗：", err);
     }
   };
 
-  if (loading) {
-    return <div className="p-4">載入中...</div>;
-  }
+  if (loading) return <div className="p-4">載入中...</div>;
 
   return (
-    <div className="p-4 bg-gray-50 min-h-screen">
-      <h1 className="text-2xl font-bold mb-4">密室清單</h1>
-      <div className="grid gap-4 md:grid-cols-2">
-        {roomData.map((room) => (
-          <div
-            key={room.id}
-            className="bg-white shadow-md rounded-lg p-4 border flex flex-col"
-          >
-            <div className="text-lg font-semibold">{room.name}</div>
-            <div className="text-sm text-gray-500">{room.location}</div>
-            <div className="text-yellow-600">⭐️ {room.rating}</div>
-            <div className="text-xs mt-1">
-              {room.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="bg-blue-100 text-blue-800 px-2 py-1 rounded mr-2"
-                >
-                  #{tag}
-                </span>
-              ))}
-            </div>
-            <button
-              disabled={clickedRooms.includes(room.id)}
-              onClick={() => handleMarkAsPlayed(room)}
-              className={`mt-auto bg-green-500 hover:bg-green-600 text-white py-2 px-4 mt-4 rounded ${
-                clickedRooms.includes(room.id) ? "opacity-50 cursor-not-allowed" : ""
-              }`}
+    <>
+      <Header user={user} />
+      <div className="p-6 bg-gray-50 min-h-screen">
+        <h1 className="text-3xl font-bold mb-6 text-center">密室清單 🗂️</h1>
+        <div className="flex flex-col gap-6">
+          {roomData.map((room) => (
+            <div
+              key={room.id}
+              className="bg-white rounded-2xl shadow-md p-4 border border-gray-100 flex flex-col md:flex-row gap-6 items-start hover:shadow-xl"
             >
-              {clickedRooms.includes(room.id) ? "✅ 已玩過" : "🎮 我玩過"}
-            </button>
-          </div>
-        ))}
+              {/* 🖼️ 左邊圖片區塊 */}
+              <div className="w-40 h-40 flex-shrink-0">
+                <img
+                  src={`/images/${room.id}.jpg`}
+                  alt={room.name}
+                  className="w-full h-full object-cover rounded-lg"
+                />
+              </div>
+
+              {/* 📄 右邊文字內容 */}
+              <div className="flex flex-col justify-between flex-1">
+                <div>
+                  <div className="text-xl font-bold text-gray-800 mb-1">{room.name}</div>
+                  <div className="text-sm text-gray-500 mb-2">{room.location}</div>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {room.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                  <RoomReviewSection roomId={room.id} />
+                </div>
+
+                <button
+                  disabled={clickedRooms.includes(room.id)}
+                  onClick={() => handleMarkAsPlayed(room)}
+                  className={`mt-4 py-2 px-4 text-sm rounded-lg font-medium transition ${
+                    clickedRooms.includes(room.id)
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-green-500 hover:bg-green-600 text-white"
+                  }`}
+                >
+                  {clickedRooms.includes(room.id) ? "✅ 已玩過" : "🎮 我玩過"}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
